@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Camp List">
+<meta name="theme-color" content="#f4f4f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1210" media="(prefers-color-scheme: dark)">
+<title>Caesar Creek Packing</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f4f1; --card: #ffffff; --text: #1c1c1e; --muted: #6b6b70;
+    --line: #e3e3de; --accent: #2e7d32; --accent-soft: #e6f2e6;
+    --danger: #c62828; --input: #f7f7f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1210; --card: #1a1f1b; --text: #ececec; --muted: #9aa09b;
+      --line: #2b322d; --accent: #6cc070; --accent-soft: #1f2e21;
+      --danger: #ef5350; --input: #141815;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 24px) env(safe-area-inset-left);
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 12px; }
+  header { padding: 16px 4px 8px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .trip { color: var(--muted); font-size: 15px; margin: 0; }
+  .trip b { color: var(--text); font-weight: 600; }
+  .bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin: 12px 0 6px; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+  .toolbar { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; }
+  .toolbar .count { flex: 1; color: var(--muted); font-size: 15px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .btn {
+    min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); font-size: 15px; font-weight: 600;
+  }
+  .btn.danger { color: var(--danger); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  .status {
+    display: none; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px;
+    background: #fdecea; color: #8a1c1c; font-size: 15px;
+  }
+  @media (prefers-color-scheme: dark) { .status { background: #3a1a1a; color: #ffb4b0; } }
+  .status.show { display: block; }
+
+  section { background: var(--card); border-radius: 16px; margin-bottom: 12px; overflow: hidden; border: 1px solid var(--line); }
+  .sec-head {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-height: 60px;
+    padding: 10px 16px; background: none; border: 0; text-align: left;
+  }
+  .chev { width: 12px; height: 12px; flex: none; border-right: 2.5px solid var(--muted); border-bottom: 2.5px solid var(--muted); transform: rotate(45deg); margin: -4px 4px 0 2px; transition: transform .2s; }
+  section.collapsed .chev { transform: rotate(-45deg); margin-top: 0; }
+  .sec-name { flex: 1; font-size: 19px; font-weight: 700; }
+  .sec-count { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  section.complete .sec-count { color: var(--accent); font-weight: 700; }
+  .sec-del { flex: none; }
+  section.collapsed .sec-body { display: none; }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li.item {
+    display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 16px;
+    border-top: 1px solid var(--line); user-select: none; -webkit-user-select: none; cursor: pointer;
+  }
+  li.item:active { background: var(--accent-soft); }
+  .box {
+    width: 28px; height: 28px; flex: none; border-radius: 8px; border: 2px solid var(--muted);
+    display: grid; place-items: center; transition: background .15s, border-color .15s;
+  }
+  .box::after { content: ""; width: 7px; height: 13px; border: solid #fff; border-width: 0 3px 3px 0; transform: rotate(45deg) translate(-1px, -1px); opacity: 0; }
+  li.checked .box { background: var(--accent); border-color: var(--accent); }
+  li.checked .box::after { opacity: 1; }
+  .text { flex: 1; }
+  li.checked .text { color: var(--muted); text-decoration: line-through; }
+  .x {
+    display: none; flex: none; width: 44px; height: 44px; margin-right: -8px; border: 0; border-radius: 10px;
+    background: none; color: var(--danger); font-size: 26px; line-height: 1;
+  }
+  body.editing .x { display: block; }
+  body:not(.editing) .sec-del { display: none; }
+
+  form.add { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+  form.add input {
+    flex: 1; min-width: 0; min-height: 46px; padding: 0 14px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--input); color: var(--text); font-size: 17px;
+  }
+  form.add input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .new-section { background: none; border: 1.5px dashed var(--line); }
+  .new-section form.add { border-top: 0; padding: 12px; }
+  .foot { text-align: center; color: var(--muted); font-size: 13px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Caesar Creek 🏕️</h1>
+    <p class="trip"><b>Thu Sep 24 – Sun Sep 27, 2026</b></p>
+    <p class="trip">Check-in 3 pm Thu · Check-out 11 am Sun · Ren Faire Sat</p>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="toolbar">
+      <span class="count" id="total">Loading…</span>
+      <button class="btn" id="editBtn" type="button">Edit</button>
+      <button class="btn danger" id="resetBtn" type="button">Reset all</button>
+    </div>
+  </header>
+
+  <div class="status" id="status"></div>
+  <main id="sections"></main>
+
+  <section class="new-section">
+    <form class="add" id="addSection" autocomplete="off">
+      <input name="name" placeholder="New section (e.g. Wife's stuff)" maxlength="60" enterkeyhint="done">
+      <button class="btn primary" type="submit">Add</button>
+    </form>
+  </section>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var API = 'api.php';
+  var POLL_MS = 4000;
+  var state = null;
+  var pending = 0;
+  var $ = function (id) { return document.getElementById(id); };
+  var main = $('sections');
+
+  // Collapsed sections are remembered per phone.
+  var collapsed = new Set();
+  try { collapsed = new Set(JSON.parse(localStorage.getItem('collapsed') || '[]')); } catch (e) {}
+  function saveCollapsed() {
+    try { localStorage.setItem('collapsed', JSON.stringify(Array.from(collapsed))); } catch (e) {}
+  }
+
+  function h(tag, attrs, children) {
+    var el = document.createElement(tag);
+    for (var k in attrs || {}) {
+      if (k === 'text') el.textContent = attrs[k];
+      else if (k === 'className') el.className = attrs[k];
+      else el.setAttribute(k, attrs[k]);
+    }
+    (children || []).forEach(function (c) { if (c) el.appendChild(c); });
+    return el;
+  }
+
+  function showStatus(msg) {
+    var s = $('status');
+    s.textContent = msg || '';
+    s.classList.toggle('show', !!msg);
+  }
+
+  function request(body) {
+    var opts = body
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      : { cache: 'no-store' };
+    var url = body ? API : API + '?t=' + Date.now();
+    return fetch(url, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok || data.error) throw new Error(data.error || ('Server error ' + r.status));
+        return data;
+      });
+    });
+  }
+
+  // Send a change; UI is already updated optimistically.
+  function send(body) {
+    pending++;
+    return request(body)
+      .then(function (s) { state = s; showStatus(''); })
+      .catch(function (e) { showStatus('Not saved: ' + e.message + '. Check Wi-Fi / NAS.'); })
+      .then(function () { pending--; if (!pending) render(); });
+  }
+
+  function load() {
+    if (pending || isTyping()) return;
+    request().then(function (s) {
+      if (pending || isTyping()) return;
+      showStatus('');
+      if (!state || s.rev !== state.rev) { state = s; render(); }
+    }).catch(function (e) {
+      showStatus('Can’t reach the NAS: ' + e.message);
+    });
+  }
+
+  function isTyping() {
+    var a = document.activeElement;
+    return a && a.tagName === 'INPUT' && a.value.trim() !== '';
+  }
+
+  function findSection(sid) {
+    return state.sections.find(function (s) { return s.id === sid; });
+  }
+
+  function render() {
+    if (!state) return;
+    var total = 0, done = 0;
+    main.textContent = '';
+
+    state.sections.forEach(function (sec) {
+      var n = sec.items.length;
+      var c = sec.items.filter(function (i) { return i.checked; }).length;
+      total += n; done += c;
+
+      var isCollapsed = collapsed.has(sec.id);
+      var el = h('section', {
+        className: (isCollapsed ? 'collapsed ' : '') + (n && c === n ? 'complete' : ''),
+        'data-sid': sec.id
+      });
+
+      var head = h('button', { className: 'sec-head', type: 'button', 'data-act': 'collapse', 'aria-expanded': String(!isCollapsed) }, [
+        h('span', { className: 'chev' }),
+        h('span', { className: 'sec-name', text: sec.name }),
+        h('span', { className: 'sec-count', text: (n && c === n ? '✓ ' : '') + c + ' of ' + n + ' packed' })
+      ]);
+      var del = h('button', { className: 'btn danger sec-del', type: 'button', 'data-act': 'delSection', text: 'Delete' });
+      var headRow = h('div', { style: 'display:flex;align-items:center;padding-right:12px' }, [head, del]);
+
+      var list = h('ul', {}, sec.items.map(function (it) {
+        return h('li', {
+          className: 'item' + (it.checked ? ' checked' : ''),
+          role: 'checkbox', tabindex: '0', 'aria-checked': String(it.checked),
+          'data-iid': it.id, 'data-act': 'toggle'
+        }, [
+          h('span', { className: 'box', 'aria-hidden': 'true' }),
+          h('span', { className: 'text', text: it.text }),
+          h('button', { className: 'x', type: 'button', 'data-act': 'delItem', 'aria-label': 'Delete ' + it.text, text: '×' })
+        ]);
+      }));
+
+      var form = h('form', { className: 'add', autocomplete: 'off' }, [
+        h('input', { name: 'text', placeholder: 'Add item to ' + sec.name, maxlength: '120', enterkeyhint: 'done' }),
+        h('button', { className: 'btn primary', type: 'submit', text: 'Add' })
+      ]);
+
+      el.appendChild(headRow);
+      el.appendChild(h('div', { className: 'sec-body' }, [list, form]));
+      main.appendChild(el);
+    });
+
+    $('total').textContent = done + ' of ' + total + ' packed';
+    $('bar').style.width = (total ? (done / total) * 100 : 0) + '%';
+    $('foot').textContent = 'Synced · ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function toggleItem(li) {
+    var sid = li.closest('section').dataset.sid;
+    var sec = findSection(sid);
+    var it = sec && sec.items.find(function (i) { return i.id === li.dataset.iid; });
+    if (!it) return;
+    it.checked = !it.checked;
+    render();
+    send({ action: 'toggle', sid: sid, iid: it.id, checked: it.checked });
+  }
+
+  main.addEventListener('click', function (e) {
+    var target = e.target.closest('[data-act]');
+    if (!target || !state) return;
+    var secEl = target.closest('section');
+    var sid = secEl && secEl.dataset.sid;
+    var act = target.dataset.act;
+
+    if (act === 'collapse') {
+      collapsed.has(sid) ? collapsed.delete(sid) : collapsed.add(sid);
+      saveCollapsed();
+      render();
+    } else if (act === 'toggle') {
+      toggleItem(target);
+    } else if (act === 'delItem') {
+      e.stopPropagation();
+      var li = target.closest('li');
+      var sec = findSection(sid);
+      var it = sec.items.find(function (i) { return i.id === li.dataset.iid; });
+      if (!confirm('Delete "' + it.text + '"?')) return;
+      sec.items = sec.items.filter(function (i) { return i !== it; });
+      render();
+      send({ action: 'delete', sid: sid, iid: it.id });
+    } else if (act === 'delSection') {
+      var s = findSection(sid);
+      if (!confirm('Delete the whole "' + s.name + '" section and its ' + s.items.length + ' items?')) return;
+      state.sections = state.sections.filter(function (x) { return x !== s; });
+      render();
+      send({ action: 'deleteSection', sid: sid });
+    }
+  });
+
+  main.addEventListener('keydown', function (e) {
+    var li = e.target.closest && e.target.closest('li.item');
+    if (li && e.target === li && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); toggleItem(li); }
+  });
+
+  main.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = e.target.querySelector('input');
+    var text = input.value.trim();
+    if (!text) return;
+    var sid = e.target.closest('section').dataset.sid;
+    findSection(sid).items.push({ id: 'tmp' + Date.now(), text: text, checked: false });
+    input.value = '';
+    input.blur();
+    render();
+    send({ action: 'add', sid: sid, text: text });
+  });
+
+  $('addSection').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = e.target.querySelector('input');
+    var name = input.value.trim();
+    if (!name || !state) return;
+    state.sections.push({ id: 'tmp' + Date.now(), name: name, items: [] });
+    input.value = '';
+    input.blur();
+    render();
+    send({ action: 'addSection', name: name });
+  });
+
+  $('resetBtn').addEventListener('click', function () {
+    if (!state || !confirm('Uncheck every item on both phones?')) return;
+    state.sections.forEach(function (s) { s.items.forEach(function (i) { i.checked = false; }); });
+    render();
+    send({ action: 'reset' });
+  });
+
+  $('editBtn').addEventListener('click', function () {
+    var on = document.body.classList.toggle('editing');
+    this.classList.toggle('on', on);
+    this.textContent = on ? 'Done' : 'Edit';
+  });
+
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
+  setInterval(function () { if (!document.hidden) load(); }, POLL_MS);
+  load();
+})();
+</script>
+</body>
+</html>
